@@ -57,13 +57,13 @@ class SwingTrading(object):
             isGreen = 1.0 if nextOpen > row['Open'] else -1.0
             ys.append(isGreen)
 
-        return xs, ys
+        # return xs, ys
 
-        # # shuffle them around: this somehow results in a super high decision tree accuracy of over 70% , but it should be random right?
-        # import random
-        # zipped = list(zip(xs, ys))
-        # random.shuffle(zipped)
-        # return zip(*zipped)
+        # shuffle them around: this somehow results in a super high decision tree accuracy of over 70% , but it should be random right?
+        import random
+        zipped = list(zip(xs, ys))
+        random.shuffle(zipped)
+        return zip(*zipped)
 
     def split_training_testing_sets(self, x, y):
         training_items = int(len(y) * self.training_split)
