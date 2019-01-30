@@ -26,17 +26,27 @@ class SwingTrading(object):
         self.df = pd.read_csv('^GSPC.csv', index_col='Date', parse_dates=True)
         x, y = self.create_dataset()
         self.train_xs, self.test_xs, self.train_ys, self.test_ys = self.split_training_testing_sets(x, y)
-        # self.neural_network()
-        self.decision_tree()
+
+        self.neural_network()
+        # self.decision_tree()
         # self.random_forest()
 
     def create_dataset(self):
         """
         returns tuple (X, y) of the form:
 
-        # Date,Open,High,Low,Close,Adj Close,Volume
-        >>> X = [   [1791.030029,1795.979980,1772.880005,1781.560059,1781.560059,4045200000],
-                    [1776.010010,1798.030029,1776.010010,1797.020020,1797.020020,3775990000],
+        >>> X = [
+                  [ 1790.880005,1793.880005,1772.260010,1782.589966,1782.589966,4059690000
+                    1796.199951,1799.939941,1791.829956,1799.839966,1799.839966,3312160000
+                    1790.880005,1793.880005,1772.260010,1782.589966,1782.589966,4059690000
+                    1796.199951,1799.939941,1791.829956,1799.839966,1799.839966,3312160000
+                    1790.880005,1793.880005,1772.260010,1782.589966,1782.589966,4059690000 ]
+
+                    [1791.030029,1795.979980,1772.880005,1781.560059,1781.560059,4045200000],
+                    [1776.010010,1798.030029,1776.010010,1797.020020,1797.020020,3775990000],  # ...
+                    [1791.030029,1795.979980,1772.880005,1781.560059,1781.560059,4045200000],  # day before yesterday
+                    [1776.010010,1798.030029,1776.010010,1797.020020,1797.020020,3775990000],  # yesterday
+                    [1791.030029,1795.979980,1772.880005,1781.560059,1781.560059,4045200000]   # today Open,High,Low,Close,Adj Close,Volume
                     .
                     .
                     .
@@ -48,16 +58,19 @@ class SwingTrading(object):
         """
         xs, ys = [], []
 
-        for index, row in self.df[:-1].iterrows():
-            xs.append([item for item in row]) # may not work, need an array of floats not a object
+        for index, row in self.df[4:-1].iterrows():
+            # past 5 days, including today
+            # past4Days = self.df[:index].tail(5).values.tolist()
+            # xs.append(self.flatten(past4Days))
+
+            # just today
+            xs.append(row.values)
 
             # determine if the following day was red or green
-            nextRow = self.df[index: ].head(2).tail(1).values
+            nextRow = self.df[index:].head(2).tail(1).values # tomorrow
             nextOpen = nextRow[0][0] # OPEN IS FIRST COLUMN!
             isGreen = 1.0 if nextOpen > row['Open'] else -1.0
             ys.append(isGreen)
-
-        # return xs, ys
 
         # shuffle them around: this somehow results in a super high decision tree accuracy of over 70% , but it should be random right?
         import random
@@ -65,12 +78,22 @@ class SwingTrading(object):
         random.shuffle(zipped)
         return zip(*zipped)
 
+    def flatten(self, past5Days):
+        flattened = []
+        for day in past5Days:
+            for val in day:
+                flattened.append(val)
+        return flattened
+
+
     def split_training_testing_sets(self, x, y):
+
         training_items = int(len(y) * self.training_split)
-        train_xs = x[:training_items]
-        test_xs = x[training_items:]
-        train_ys = y[:training_items]
-        test_ys = y[training_items:]
+        train_xs = list(x[:training_items])
+        test_xs = list(x[training_items:])
+        train_ys = list(y[:training_items])
+        test_ys = list(y[training_items:])
+
         return train_xs, test_xs, train_ys, test_ys
 
 
@@ -78,15 +101,7 @@ class SwingTrading(object):
         """
         tests accuracy of fitted training data on test set
         """
-        # print "\ntext xs", self.test_xs
-        # print "\ntest ys", self.test_ys
-        # print "\ntr xs", self.train_xs
-        # print "\ntr ys", self.train_ys
-
         y_true, y_pred = self.test_ys, clf.predict(self.test_xs)
-
-        print "y_true", y_true
-        print "y_actual", y_pred
 
         from sklearn.metrics import classification_report, accuracy_score
         print('Results on the test set:')
@@ -134,6 +149,7 @@ class SwingTrading(object):
                 prune_index(inner_tree, inner_tree.children_right[index], threshold)
 
         clf = tree.DecisionTreeClassifier()
+
         clf.fit(self.train_xs, self.train_ys)
 
         print "pruning"
@@ -142,7 +158,8 @@ class SwingTrading(object):
         prune_index(clf.tree_, 0, 5)
         print sum(clf.tree_.children_left < 0)
 
-        print "DTree prediction for tomorrow", clf.predict(self.df.tail(1).values.tolist())
+        print "DTree prediction for tomorrow", clf.predict([self.flatten(self.df.tail(5).values.tolist())]) # for 5 days
+        # print "DTree prediction for tomorrow", clf.predict(self.df.tail(1).values.tolist())
         self.test_accuracy(clf)
 
         visualize()
@@ -182,7 +199,8 @@ class SwingTrading(object):
         clf.fit(self.train_xs, self.train_ys)
 
         # tomorrow = [[2657.439941,2672.379883,2657.330078,2664.760010,2664.760010,3814080000]]
-        print "prediction for tomorrow", clf.predict(self.df.tail(1).values.tolist())
+        print "NN prediction for tomorrow", clf.predict([self.flatten(self.df.tail(5).values.tolist())]) # for 5 days
+        # print "NN prediction for tomorrow", clf.predict(self.df.tail(1).values.tolist())
 
         self.test_accuracy(clf)
 
