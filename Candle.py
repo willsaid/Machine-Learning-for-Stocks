@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 class Candle(object):
     def __init__(self, open, close, high, low, volume):
@@ -19,3 +20,33 @@ class Candle(object):
         candle.low = min([candle.low for candle in candles])
         candle.volume = np.mean([candle.volume for candle in candles])
         return candle
+
+    @staticmethod
+    def swingCandlesFromDataframe(df):
+        """
+        returns [Candle]
+
+        currently only supports GSPC, from Yahoo Finance
+        """
+        # print df
+        candles = []
+        for index, row in df.iterrows():
+            open, high, low, close, adjclose, volume = row.values
+            # Open,High,Low,Close,Adj Close,Volume # GSPC!!!
+            candles.append(Candle(open,high,low,close,volume))
+        return candles
+
+    @staticmethod
+    def dayCandlesFromDataframe(df):
+        """
+        returns [Candle]
+
+        works with Alpha Vantage api, like AMD
+        """
+        # print df
+        candles = []
+        for index, row in df.iterrows():
+            open, high, low, close, volume = row.values
+            # Open,High,Low,Close,Adj Close,Volume # GSPC!!!
+            candles.append(Candle(open,high,low,close,volume))
+        return candles

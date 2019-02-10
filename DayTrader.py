@@ -28,9 +28,13 @@ df = pd.read_csv(
 """
 class DayTrader(Trader.Trader):
 
-    def __init__(self):
+    def __init__(self, df=None):
         self.tradingType = 'DayTrader'
-        self.df = pd.read_csv('amd.csv', index_col='timestamp', parse_dates=True)
+        if df is None:
+            self.df = pd.read_csv('amd.csv', index_col='timestamp', parse_dates=True)
+        else:
+            # print df
+            self.df = df
         x, y = self.create_dataset()
         self.train_xs, self.test_xs, self.train_ys, self.test_ys = self.split_training_testing_sets(x, y)
 
@@ -56,9 +60,9 @@ class DayTrader(Trader.Trader):
         >>> y = [1.0, -1.0, . . .]
 
         """
-        xs, ys = [], []
+        xs, ys, gains = [], [], []
 
-        # df -> one min candles
+        # df -> one min candles. [4:-1] is on purpose.
         one_min_candles = []
         for index, row in self.df[4:-1].iterrows():
             open, high, low, close, volume = row.values
@@ -81,10 +85,20 @@ class DayTrader(Trader.Trader):
                 # pastCandleValues.append(candle.high)
                 # pastCandleValues.append(candle.low)
             xs.append(pastCandleValues)
-            ys.append(self.classifySharpe(self.sharpe(three_min_candles[index+1:index+6])))
+            next_candles = three_min_candles[index+1:index+6]
+            gains.append((next_candles[-1].close - next_candles[1].open) / next_candles[1].open - 1) # normalized, like -.01 1% loss
+            ys.append(self.classifySharpe(self.sharpe(next_candles)))
 
         # used for predicting tomorrow
         self.current_sample = xs[-1]
+
+        splitting_index = int(-1 * (1.0 - self.training_split) * len(three_min_candles))
+        self.testingX = xs[:splitting_index]
+        self.testingY = ys[:splitting_index]
+        self.testingGains = gains[:splitting_index]
+        self.trainingGains = gains[splitting_index:]
+        xs = xs[splitting_index:]
+        ys = ys[splitting_index:]
 
         # shuffle them around: this somehow results in a super high decision tree accuracy of over 70% , but it should be random right?
         import random
