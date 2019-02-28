@@ -3,13 +3,55 @@ from DayTrader import DayTrader
 import Trader
 from Candle import Candle
 
+import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+
 """
 analysis
 """
+
+def export_data(swing=True):
+    if swing:
+        s = SwingTrader()
+    else:
+        s = DayTrader()
+    lines = []
+    for i in range(len(s.xs)):
+        lines.append(s.xs[i] + [s.ys[i]])
+
+    print "len is ", len(s.xs)
+
+    with open('amd-out.txt', 'w') as f:
+        for line in lines:
+            for item in line:
+                f.write("%s " % item)
+            f.write("\n")
+
+def export_day_trader():
+    s = DayTrader()
+
+    # limit to last 7, not last 20, data points
+    trimmed_xs, trimmed_ys = [], []
+
+
+    lines = []
+    for i in range(len(s.xs)):
+        trimmed_xs = s.xs[i][-5:]
+        y = [s.ys[i]]
+        lines.append(trimmed_xs + y)
+        print trimmed_xs + y
+
+    # print lines
+    print "len is ", len(s.xs)
+
+    with open('amd-out-trimmed.txt', 'w') as f:
+        for line in lines:
+            for item in line:
+                f.write("%s " % item)
+            f.write("\n")
 
 def day_chart_datas():
     """

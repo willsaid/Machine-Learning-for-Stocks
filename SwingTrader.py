@@ -109,6 +109,8 @@ class SwingTrader(Trader.Trader):
         # used for predicting tomorrow
         # print self.df
         self.current_sample = xs[-1]
+        self.xs = xs
+        self.ys = ys
 
         # shuffle them around: this somehow results in a super high decision tree accuracy of over 70% , but it should be random right?
         import random

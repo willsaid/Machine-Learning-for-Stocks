@@ -92,6 +92,10 @@ class DayTrader(Trader.Trader):
         # used for predicting tomorrow
         self.current_sample = xs[-1]
 
+        # used for exporting to .txt
+        self.xs = xs
+        self.ys = ys
+
         splitting_index = int(-1 * (1.0 - self.training_split) * len(three_min_candles))
         self.testingX = xs[:splitting_index]
         self.testingY = ys[:splitting_index]

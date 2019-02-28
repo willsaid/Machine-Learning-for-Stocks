@@ -16,4 +16,4 @@ implements the following 5 machine learning algos on the SwingTrading and DayTra
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
 if __name__ == '__main__':
-    analysis.swing_several_sims()
+    analysis.export_day_trader()
