@@ -15,6 +15,14 @@ from sklearn import svm
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 
 
+from sklearn.cluster import KMeans
+from sklearn.mixture import GaussianMixture
+from sklearn.decomposition import PCA
+from sklearn.decomposition import FastICA
+from sklearn import random_projection
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.feature_selection import VarianceThreshold
+
 
 """
 trading classifier for stock prediction
@@ -145,12 +153,16 @@ class Trader(object):
         accuracy = self.test_accuracy(clf, debug)
         return clf, accuracy
 
-    def neural_network(self, debug=True, max_iter=200):
+    def neural_network(self, debug=True, max_iter=200, X=None, testX=None):
         """
         see https://scikit-learn.org/stable/modules/neural_networks_supervised.html
         """
         # 10% validation fraction
 
+        if X is None:
+            X = self.train_xs
+        if testX is not None:
+            self.test_xs = testX
         # clf = MLPClassifier(solver='lbfgs', alpha=1e-07,activation='tanh', max_iter=100, hidden_layer_sizes=[(50,50,50,50)])
         clf = MLPClassifier(solver='lbfgs', hidden_layer_sizes=(50,50,50), activation='relu', alpha=0.0000001, max_iter=max_iter)
 
@@ -163,8 +175,13 @@ class Trader(object):
         #     'max_iter': [150, 200, 250], # 200
         # }
         # clf = GridSearchCV(clf, parameter_space, n_jobs=-1, cv=3) # 3 cross validation sets
-
-        clf.fit(self.train_xs, self.train_ys)
+        # print X is None
+        # print np.array(self.xs).shape
+        # print X
+        print np.array(X).shape
+        print np.array(self.train_ys).shape
+        # print self.train_ys
+        clf.fit(X, self.train_ys)
 
         # print clf.best_params_
         if debug:
@@ -173,6 +190,111 @@ class Trader(object):
             print "NN prediction for tomorrow for " + self.tradingType, clf.predict([self.current_sample])
         accuracy = self.test_accuracy(clf, debug)
         return clf, accuracy
+
+
+    def k_means_clustering(self, debug=True, n_clusters=2, X=None):
+        """
+        https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html
+        >>> X = np.array([[1, 2], [1, 4], [1, 0],
+        ...               [10, 2], [10, 4], [10, 0]])
+        >>> kmeans = KMeans(n_clusters=2, random_state=0).fit(X)
+        >>> kmeans.labels_
+        array([1, 1, 1, 0, 0, 0], dtype=int32)
+        >>> kmeans.predict([[0, 0], [12, 3]])
+        array([1, 0], dtype=int32)
+        >>> kmeans.cluster_centers_
+        array([[10.,  2.],
+               [ 1.,  2.]])
+        """
+        if X is None:
+            X = self.xs
+        kmeans = KMeans(n_clusters=n_clusters).fit(X)
+        # if debug:
+            # print "K Means labels", kmeans.labels_
+            # print "K Means Centers", kmeans.cluster_centers_
+            # print "K Means Prediction", kmeans.predict([self.current_sample])
+
+            # swing trading:
+            # print "K Means Test Predict [1.         1.00408393 1.00800404 1.01096457 1.01265234]:", kmeans.predict([[1.,         1.00408393, 1.00800404, 1.01096457, 1.01265234]])
+            # print "K Means Test Predict [1.         0.99533576 0.99089404 0.98759187 0.9859582 ]:", kmeans.predict([[1.,         0.99533576, 0.99089404, 0.98759187, 0.9859582]])
+        # accuracy = self.test_accuracy(kmeans, debug)
+        return kmeans
+
+    def expectation_max(self, debug=True, n_clusters=2):
+        em = GaussianMixture(n_components = n_clusters).fit(self.train_xs)
+        print "GaussianMixture Prediction:", em.predict([self.current_sample])
+        print "Predicted Prob:", em.predict_proba([self.current_sample])
+        accuracy = self.test_accuracy(em, debug)
+        return em, accuracy
+
+
+    def pca(self, debug=True, n_components=2, X=None):
+        """
+        >>> X = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
+        >>> pca = PCA(n_components=2)
+        >>> pca.fit(X)
+        PCA(copy=True, iterated_power='auto', n_components=2, random_state=None,
+          svd_solver='auto', tol=0.0, whiten=False)
+        >>> print(pca.explained_variance_ratio_)
+        [0.9924... 0.0075...]
+        >>> print(pca.singular_values_)
+        [6.30061... 0.54980...]
+        """
+        if X is None: X = self.xs
+        pca = PCA(n_components=n_components)
+        pca.fit(X)
+        # print "pca.explained_variance_ratio_", pca.explained_variance_ratio_, "\n\n"
+        # print "pca.singular_values_", pca.singular_values_, "\n\n"
+        # print "pca.score", pca.score(self.xs), "\n\n"
+        # print "pca.score_samples", len(pca.score_samples(self.train_xs)), pca.score_samples(self.train_xs), "\n\n"
+        # print "pca.transform", len(pca.transform(self.train_xs)), pca.transform(self.train_xs), "\n\n"
+        eigenvectors = pca.components_
+        eigenvalues = pca.explained_variance_
+        # print "eigenvectors", eigenvectors
+        # print "eigenvalues", eigenvalues, "\n\n"
+        # accuracy = self.test_accuracy(pca, debug)
+        # return pca, accuracy
+        return pca.fit_transform(X)
+
+
+    def ica(self, n_components=3):
+        """
+        >>> transformer = FastICA(n_components=7,
+        ...         random_state=0)
+        >>> X_transformed = transformer.fit_transform(X)
+        >>> X_transformed.shape
+        (1797, 7)
+        """
+        ica = FastICA(n_components=n_components)
+        X_trans = ica.fit_transform(self.xs)
+        print ica.components_
+        return X_trans
+        # print "X_transformed.shape", X_transformed.shape
+
+
+
+    def rca(self,n_components=2):
+        """
+        Reduce dimensionality through Gaussian random projection
+        The components of the random matrix are drawn from N(0, 1 / n_components).
+        >>> X = np.random.rand(100, 10000)
+        >>> transformer = random_projection.GaussianRandomProjection()
+        >>> X_new = transformer.fit_transform(X)
+        """
+        rca = random_projection.GaussianRandomProjection(n_components=n_components)
+        X_trans = rca.fit_transform(self.xs)
+        return X_trans
+
+
+    def lda(self,n_components=2):
+        lda = LinearDiscriminantAnalysis(n_components=n_components)
+        X_trans = lda.fit(self.xs, self.ys).transform(self.xs)
+        return X_trans
+
+    def var_threshold(self, percentage_reduction=0.8):
+        feature_selection = VarianceThreshold(threshold=(percentage_reduction * (1 - percentage_reduction)))
+        X_trans = feature_selection.fit_transform(self.xs)
+        return X_trans
 
 
 

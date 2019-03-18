@@ -149,24 +149,24 @@ def ideal_prune():
     plt.legend()
     plt.show()
 
-def day_trials(outer_trials=50, inner_trials=3, kernel='poly', degree=5, neighbors=5, prune_val=5):
+def day_trials(outer_trials=2, inner_trials=5, kernel='poly', degree=5, neighbors=5, prune_val=5, X=None, testX=None):
     allmoneys=[]
     allboosts=[]
     for _ in range(outer_trials):
         d = DayTrader()
         boosts, moneys = [], []
         for _ in range(0, inner_trials):
-            print "*******BOOSTING"
+            # print "*******BOOSTING"
             # acc, money = day_simulations(d.svm(debug=False, kernel=kernel, degree=degree), d, debug=False)
             # acc, money = day_simulations(d.knn(debug=False, neighbors=neighbors), d, debug=False)
-            acc, money = day_simulations(d.boost(debug=False, prune_val=prune_val), d, debug=False)
+            acc, money = day_simulations(d.neural_network(debug=False, X=X, testX=testX), d, debug=False)
             boosts.append(acc)
             moneys.append(money)
         # print "*************\n\naverage accuracies for :"
         # print np.mean(boosts)
         # print "avg money:", np.mean(moneys)
         # print "avg daily returns:"
-        dr = (abs(np.mean(moneys)) ** (1.0 / len(d.testingX)) - 1) * 100
+        dr = (abs(np.mean(moneys)) ** (1.0 / len(d.test_xs)) - 1) * 100
         if np.mean(moneys) < 0: dr *= -1
         allmoneys.append(dr)
         allboosts.append(np.mean(boosts))
@@ -190,13 +190,13 @@ def day_simulations(clf_acc, daytrader, debug=True):
     clf, trainingAcc = clf_acc
     correct=0
     total=0
-    y_true, y_pred = daytrader.testingY, clf.predict(daytrader.testingX)
+    y_true, y_pred = daytrader.test_ys, clf.predict(daytrader.test_xs)
     accuracy = Trader.reports(y_true, y_pred, debug=debug)
 
     money = 1.0
-    for i in range(len(daytrader.testingX)):
+    for i in range(len(daytrader.test_xs)):
         gain = daytrader.testingGains[i]
-        prediction = clf.predict([daytrader.testingX[i]])
+        prediction = clf.predict([daytrader.test_xs[i]])
         if prediction == 1:
             money += gain
         else:
@@ -308,17 +308,18 @@ def swing_chart_datas():
     plt.show()
 
 
-def swing_several_sims(past_days=5, outer_trials=2, inner_trials=20, kernel='poly', degree=5, neighbors=2, iterations=200):
+def swing_several_sims(s=None, past_days=5, outer_trials=1, inner_trials=2, kernel='poly', degree=5, neighbors=2, iterations=200, X=None, testX=None):
     days = 252 * 11
     allaccs, allmoneys = [], []
     for _ in range(outer_trials):
-        s = SwingTrader(past_days=past_days, excluding_last=days)
+        if s is not None: s = SwingTrader(past_days=past_days, excluding_last=days)
         accs, moneys = 0, 0
         for _ in range(inner_trials):
-            boostAcc, boostMoney = swing_simulation_for_2018(s.knn(debug=False, neighbors=neighbors)[0], past_days=past_days, candles=s.last_remaining())
-            # boostAcc, boostMoney = swing_simulation_for_2018(s.neural_network(debug=False, max_iter=iterations)[0], past_days=past_days, candles=s.last_remaining())
+            # boostAcc, boostMoney = swing_simulation_for_2018(s.knn(debug=False, neighbors=neighbors)[0], past_days=past_days, candles=s.last_remaining())
+            # boostAcc, boostMoney = swing_simulation_for_2018(s.neural_network(debug=False, max_iter=iterations, X=X, testX=testX)[0], past_days=past_days, candles=s.last_remaining())
+            boostAcc = s.neural_network(debug=False, max_iter=iterations, X=X, testX=testX)[1]
             accs += boostAcc
-            moneys += boostMoney
+            # moneys += boostMoney
         # print "\n\navg acc", accs / float(inner_trials)
         # print "avg money", moneys / float(outer_trials)
         allaccs.append(accs / float(inner_trials))
@@ -391,7 +392,7 @@ def swing_simulation_for_2018(clf=None, past_days=5, candles=None):
         s = SwingTrader(past_days=past_days, excluding_last=252) # doesnt include last year at all
         candles2018 = s.last_remaining()
         clf = s.boost()[0]
-
+        print "************************no clf!!!!!!"
     correct=0
     total=0
 
@@ -420,7 +421,7 @@ def swing_simulation_for_2018(clf=None, past_days=5, candles=None):
         #
         #
         # print "pastXDays", past_X_days
-
+        print normalized_xs
         prediction = int(clf.predict(normalized_xs)[0]) # 1 is predicting Green, -1 is Red
         tmmrw_open = candles2018[candleIndex+1].open
         today_close = candles2018[candleIndex].close

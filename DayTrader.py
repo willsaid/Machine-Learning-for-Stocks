@@ -79,14 +79,17 @@ class DayTrader(Trader.Trader):
         # to find sharpe between now and after next 5 candles
         for index in range(19, len(three_min_candles) - 5):
             pastCandleValues = []
+            normalization_factor = three_min_candles[index-19].close # first one in the xs
             for candle in three_min_candles[index-19:index+1]:
                 # pastCandleValues.append(candle.open)
-                pastCandleValues.append(candle.close)
+                pastCandleValues.append(candle.close / normalization_factor)
                 # pastCandleValues.append(candle.high)
                 # pastCandleValues.append(candle.low)
             xs.append(pastCandleValues)
-            next_candles = three_min_candles[index+1:index+6]
-            gains.append((next_candles[-1].close - next_candles[1].open) / next_candles[1].open - 1) # normalized, like -.01 1% loss
+            next_candles = three_min_candles[index+1:index+6] # next 15 min
+            g = (next_candles[-1].close - next_candles[1].open) / next_candles[1].open - 1
+
+            gains.append(g) # normalized, like -.01 1% loss
             ys.append(self.classifySharpe(self.sharpe(next_candles)))
 
         # used for predicting tomorrow

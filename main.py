@@ -1,4 +1,5 @@
 import analysis
+import unsupervised_analysis
 
 import numpy as np
 import warnings
@@ -16,4 +17,4 @@ implements the following 5 machine learning algos on the SwingTrading and DayTra
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
 if __name__ == '__main__':
-    analysis.export_day_trader()
+    unsupervised_analysis.neural_after_kmeans()

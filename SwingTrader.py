@@ -73,11 +73,11 @@ class SwingTrader(Trader.Trader):
 
         """
         xs, ys = [], []
+        difference_from_yesterday = [] # percent change from close to open 
 
         for index, row in self.df[past_days - 1 : -1].iterrows():
             # past X days, including today
             pastXDays = self.df[:index].tail(past_days).values.tolist()
-
             # delete me: just uses past closing days!
             pastXDays = [x[3] for x in pastXDays]
             # print pastXDays
@@ -103,6 +103,7 @@ class SwingTrader(Trader.Trader):
             # determine if the following day was red or green
             nextRow = self.df[index:].head(2).tail(1).values # tomorrow
             nextOpen = nextRow[0][0] # OPEN IS FIRST COLUMN!
+            difference_from_yesterday.append(((nextOpen - row['Open']) / row['Open']) * 100)
             isGreen = 1.0 if nextOpen > row['Open'] else -1.0
             ys.append(isGreen)
 
@@ -111,6 +112,7 @@ class SwingTrader(Trader.Trader):
         self.current_sample = xs[-1]
         self.xs = xs
         self.ys = ys
+        self.difference_from_yesterday = difference_from_yesterday
 
         # shuffle them around: this somehow results in a super high decision tree accuracy of over 70% , but it should be random right?
         import random
